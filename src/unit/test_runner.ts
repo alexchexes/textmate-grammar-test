@@ -1,23 +1,15 @@
 import { err, ok, type Result } from '@serkonda7/ts-result'
 import tm from 'vscode-textmate'
-import {
-	DEFAULT_TAB_SIZE,
-	raw_index_to_visual_column,
-	visual_column_to_raw_index,
-} from './columns.ts'
 import { parse_file } from './index.ts'
 import { find_overlapping_tokens, get_missing_scopes, get_unexpected_scopes } from './scopes.ts'
 import type { TestFailure, TestResult } from './types.ts'
 
 export class TestRunner {
-	constructor(
-		private registry: tm.Registry,
-		private tab_size: number = DEFAULT_TAB_SIZE,
-	) {}
+	constructor(private registry: tm.Registry) {}
 
 	async test_file(file_content: string): Promise<Result<TestResult>> {
 		// Parse file
-		const test_case_r = parse_file(file_content, this.tab_size)
+		const test_case_r = parse_file(file_content)
 		if (test_case_r.error) {
 			return err(test_case_r.error)
 		}
@@ -35,11 +27,7 @@ export class TestRunner {
 
 		for (const line of test_case.test_lines) {
 			const { line_nr, src: src_line, scope_asserts } = line
-			const visual_line_length = raw_index_to_visual_column(
-				src_line,
-				src_line.length,
-				this.tab_size,
-			)
+			const line_length = src_line.length
 
 			// Tokenize line
 			const { tokens, ruleStack: new_state } = grammar.tokenizeLine(src_line, prev_state)
@@ -58,13 +46,11 @@ export class TestRunner {
 			}
 
 			scope_asserts.forEach(({ from, to, scopes: requiredScopes, excludes: excludedScopes }) => {
-				const from_raw = visual_column_to_raw_index(src_line, from, this.tab_size)
-				const to_raw = visual_column_to_raw_index(src_line, to, this.tab_size)
-				const asserted_tokens = find_overlapping_tokens(tokens, from_raw, to_raw)
+				const asserted_tokens = find_overlapping_tokens(tokens, from, to)
 
 				// Fail on assertion beyond eol
-				if (to > visual_line_length && !is_root_scope_token(tokens, src_line.length)) {
-					failures.push(this.eol_failure(line_nr, src_line, visual_line_length, to))
+				if (to > line_length && !is_root_scope_token(tokens, src_line.length)) {
+					failures.push(this.eol_failure(line_nr, src_line, line_length, to))
 					return
 				}
 

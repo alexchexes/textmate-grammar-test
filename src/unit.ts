@@ -8,14 +8,12 @@ import { globSync } from 'glob'
 import { array_opt, ExitCode } from './common/cli'
 import { createConsoleReporter } from './common/reporter/index.ts'
 import { register_grammars } from './common/textmate/index.ts'
-import { DEFAULT_TAB_SIZE } from './unit/columns.ts'
 import { TestRunner } from './unit/index.ts'
 
 interface CliOptions {
 	grammar: string[]
 	config: string
 	compact: boolean
-	tabsize: number
 }
 
 program
@@ -35,14 +33,6 @@ program
 		'-c, --compact',
 		'Display output in the compact format, which is easier to use with VSCode problem matchers',
 	)
-	.option(
-		'--tabsize <n>',
-		`Tab stop size used to align assertions with source lines. Default: ${DEFAULT_TAB_SIZE}`,
-		(arg) => {
-			return Number.parseInt(arg, 10)
-		},
-		DEFAULT_TAB_SIZE,
-	)
 	.argument(
 		'<testcases...>',
 		'A glob pattern(s) which specifies testcases to run, e.g. "./tests/**/test*.dhall". Quotes are important!',
@@ -61,7 +51,7 @@ async function main(): Promise<ExitCode> {
 	}
 
 	const { registry } = unwrap(register_grammars(options.config, options.grammar))
-	const runner = new TestRunner(registry, options.tabsize)
+	const runner = new TestRunner(registry)
 	const reporter = createConsoleReporter(options.compact)
 
 	async function runSingleTest(filename: string): Promise<ExitCode> {

@@ -46,6 +46,8 @@ npx textmate-grammar-snap --help
 
 
 ## 🧩 Unit Testing Syntax
+> Note: Spaces are recommended for indentation.
+
 <!-- TODO example -->
 <!-- TODO small collapsible glossar -->
 

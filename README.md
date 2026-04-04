@@ -69,11 +69,11 @@ npx textmate-grammar-snap --updateSnapshot "tests/**/*.foo"
 
 ### File Header
 Every test file must start with a header line in the format
-`<comment token> SYNTAX TEST "<scopeName>" "Optional description"`.
+`<comment token> SYNTAX TEST v1 "<scopeName>" "Optional description"`.
 
 For example:
 ```ts
-// SYNTAX TEST "source.ts" "Example header for a TypeScript grammar test"
+// SYNTAX TEST v1 "source.ts" "Example header for a TypeScript grammar test"
 ```
 
 

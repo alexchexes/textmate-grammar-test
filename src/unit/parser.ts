@@ -96,12 +96,12 @@ export function parse_file(str: string): Result<GrammarTestFile, Error> {
 
 		// Scope assertion line
 		if (is_assertion(line)) {
-			const assertion = assert_parser.parse_line(line)
-			if (assertion.error) {
-				return err(assertion.error)
+			const assertions = assert_parser.parse_line_assertions(line)
+			if (assertions.error) {
+				return err(assertions.error)
 			}
 
-			scope_assertions.push(assertion.value)
+			scope_assertions.push(...assertions.value)
 			continue
 		}
 
@@ -134,6 +134,15 @@ export class AssertionParser {
 	constructor(private readonly comment_length: number) {}
 
 	parse_line(line: string): Result<ScopeAssertion, SyntaxError> {
+		const assertions = this.parse_line_assertions(line)
+		if (assertions.error) {
+			return err(assertions.error)
+		}
+
+		return ok(assertions.value[0])
+	}
+
+	parse_line_assertions(line: string): Result<ScopeAssertion[], SyntaxError> {
 		let pos = 0
 
 		// Skip comment token and whitespace around
@@ -141,19 +150,34 @@ export class AssertionParser {
 		pos += this.comment_length
 		pos = this.skip_whitespace(line, pos)
 
-		const rangeResult = this.parse_assertion_range(line, pos)
-		if (rangeResult.error) {
-			return err(rangeResult.error)
+		let ranges: Array<{ from: number; to: number }> = []
+		let nextPos = pos
+
+		if (line[pos] === '^') {
+			const caretRanges = this.parse_caret_assertion_ranges(line, pos)
+			if (caretRanges.error) {
+				return err(caretRanges.error)
+			}
+
+			ranges = caretRanges.value.ranges
+			nextPos = caretRanges.value.nextPos
+		} else {
+			const rangeResult = this.parse_assertion_range(line, pos)
+			if (rangeResult.error) {
+				return err(rangeResult.error)
+			}
+
+			ranges = [{ from: rangeResult.value.from, to: rangeResult.value.to }]
+			nextPos = rangeResult.value.nextPos
 		}
 
-		const { from, to, nextPos } = rangeResult.value
 		const { scopes, excludes } = this.parse_scopes_and_exclusions(line.slice(nextPos))
 
 		if (scopes.length === 0 && excludes.length === 0) {
 			return err(new SyntaxError(ERR_ASSERT_NO_SCOPES))
 		}
 
-		return ok({ from, to, scopes, excludes })
+		return ok(ranges.map(({ from, to }) => ({ from, to, scopes, excludes })))
 	}
 
 	private skip_whitespace(line: string, pos: number): number {
@@ -200,6 +224,30 @@ export class AssertionParser {
 		}
 
 		return err(new SyntaxError(ERR_ASSERT_PARSE))
+	}
+
+	private parse_caret_assertion_ranges(
+		line: string,
+		pos: number,
+	): Result<{ ranges: Array<{ from: number; to: number }>; nextPos: number }, SyntaxError> {
+		const ranges: Array<{ from: number; to: number }> = []
+		let current = pos
+
+		while (line[current] === '^') {
+			const rangeResult = this.parse_assertion_range(line, current)
+			if (rangeResult.error) {
+				return err(rangeResult.error)
+			}
+
+			ranges.push({
+				from: rangeResult.value.from,
+				to: rangeResult.value.to,
+			})
+
+			current = this.skip_whitespace(line, rangeResult.value.nextPos)
+		}
+
+		return ok({ ranges, nextPos: current })
 	}
 
 	/**

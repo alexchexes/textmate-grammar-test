@@ -1,4 +1,8 @@
 # Changelog
+## Unreleased
+
+- unit: Restore support for multiple disjoint caret assertions on one line, e.g. `^^  ^^^ source.xy`
+
 ## 0.6.0
 _2026-03-12_
 

@@ -43,6 +43,25 @@ describe('parseTestFile', () => {
 		check_result(res)
 	})
 
+	test('multiple assertions in one line', () => {
+		const res = unwrap(parse_file('# SYNTAX TEST "source.xy"\nfoo bar\n# ^^  ^^^ source.xy\n'))
+		expect(res.test_lines).toHaveLength(1)
+		expect(res.test_lines[0]?.scope_asserts).toStrictEqual([
+			{
+				from: 2,
+				to: 4,
+				scopes: ['source.xy'],
+				excludes: [],
+			},
+			{
+				from: 6,
+				to: 9,
+				scopes: ['source.xy'],
+				excludes: [],
+			},
+		])
+	})
+
 	function check_result(res: GrammarTestFile) {
 		expect(res.metadata.scope).toBe('source.xy')
 		expect(res.metadata.comment_token).toBe('#')
@@ -103,6 +122,63 @@ describe('AssertionParser assert kinds', () => {
 	})
 })
 
+describe('AssertionParser multiple assertions in one line', () => {
+	const assert_parser = new AssertionParser(1)
+
+	test('reuses the same scopes for repeated caret groups', () => {
+		expect(unwrap(assert_parser.parse_line_assertions('# ^^  ^^^ source.xy'))).toStrictEqual([
+			{
+				from: 2,
+				to: 4,
+				scopes: ['source.xy'],
+				excludes: [],
+			},
+			{
+				from: 6,
+				to: 9,
+				scopes: ['source.xy'],
+				excludes: [],
+			},
+		])
+	})
+
+	test('reuses exclusions for repeated caret groups', () => {
+		expect(
+			unwrap(assert_parser.parse_line_assertions('# ^^  ^^^ source.xy ! foo.bar')),
+		).toStrictEqual([
+			{
+				from: 2,
+				to: 4,
+				scopes: ['source.xy'],
+				excludes: ['foo.bar'],
+			},
+			{
+				from: 6,
+				to: 9,
+				scopes: ['source.xy'],
+				excludes: ['foo.bar'],
+			},
+		])
+	})
+
+	test('reuses negative-only assertions for repeated caret groups', () => {
+		expect(unwrap(assert_parser.parse_line_assertions('# ^^^ ^^ ! source.xy'))).toStrictEqual([
+			{
+				from: 2,
+				to: 5,
+				scopes: [],
+				excludes: ['source.xy'],
+			},
+			{
+				from: 6,
+				to: 8,
+				scopes: [],
+				excludes: ['source.xy'],
+			},
+		])
+	})
+})
+
 describe('AssertionParser scopes', () => {
 	const assert_parser = new AssertionParser(1)
 
@@ -128,6 +204,12 @@ describe('AssertionParser scopes', () => {
 		)
 		expect(res.excludes).toHaveLength(2)
 		expect(res.scopes).toHaveLength(0)
+	})
+
+	test('caret exclusions', () => {
+		const res = unwrap(assert_parser.parse_line('# ^ ! source.xy'))
+		expect(res.scopes).toEqual([])
+		expect(res.excludes).toEqual(['source.xy'])
 	})
 
 	test('complex', () => {

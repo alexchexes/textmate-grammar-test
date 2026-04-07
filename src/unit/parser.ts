@@ -244,7 +244,12 @@ export class AssertionParser {
 				to: rangeResult.value.to,
 			})
 
-			current = this.skip_whitespace(line, rangeResult.value.nextPos)
+			const nextRangePos = this.skip_whitespace(line, rangeResult.value.nextPos)
+			if (line[nextRangePos] !== '^') {
+				return ok({ ranges, nextPos: rangeResult.value.nextPos })
+			}
+
+			current = nextRangePos
 		}
 
 		return ok({ ranges, nextPos: current })

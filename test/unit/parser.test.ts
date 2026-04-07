@@ -160,6 +160,23 @@ describe('AssertionParser multiple assertions in one line', () => {
 			},
 		])
 	})
+
+	test('reuses negative-only assertions for repeated caret groups', () => {
+		expect(unwrap(assert_parser.parse_line_assertions('# ^^^ ^^ ! source.xy'))).toStrictEqual([
+			{
+				from: 2,
+				to: 5,
+				scopes: [],
+				excludes: ['source.xy'],
+			},
+			{
+				from: 6,
+				to: 8,
+				scopes: [],
+				excludes: ['source.xy'],
+			},
+		])
+	})
 })
 
 describe('AssertionParser scopes', () => {
@@ -187,6 +204,12 @@ describe('AssertionParser scopes', () => {
 		)
 		expect(res.excludes).toHaveLength(2)
 		expect(res.scopes).toHaveLength(0)
+	})
+
+	test('caret exclusions', () => {
+		const res = unwrap(assert_parser.parse_line('# ^ ! source.xy'))
+		expect(res.scopes).toEqual([])
+		expect(res.excludes).toEqual(['source.xy'])
 	})
 
 	test('complex', () => {

@@ -92,6 +92,16 @@ let count: number = 1
 //         ^^^^^^ meta.type.annotation.ts meta.var-single-variable.expr.ts meta.var.expr.ts
 ```
 
+Or you assert the same scopes for multiple tokens in one line:
+```ts
+let x = y + z
+//  ^   ^   ^ variable.other.readwrite.ts
+
+// Also works with negative assertions:
+let x = y + z
+//  ^   ^   ^ variable.other.readwrite.ts ! keyword.operator.arithmetic.ts
+```
+
 
 ### Prevent specific scopes
 To ensure a token does not receive an unexpected scope,
